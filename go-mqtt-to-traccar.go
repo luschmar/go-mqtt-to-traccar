@@ -5,8 +5,8 @@ import (
 	mqtt "github.com/eclipse/paho.mqtt.golang"
 	"os"
 	"os/signal"
+	"strings"
 	"syscall"
-	// "time"
 	"encoding/json"
 	"net/http"
 )
@@ -14,8 +14,11 @@ import (
 type DecodedPayload struct {
 	Latitude  float64 `json:"Latitude"`
 	Longitude float64 `json:"Longitude"`
-	HDOP      string  `json:"HDOP"`
+	HDOP      float32 `json:"HDOP"`
+	BatV      float64 `json:"BatV"`
 	Altitude  float64 `json:"Altitude"`
+	Alarm     string  `json:"ALARM_status"`
+	MD        string  `json:"MD"`
 }
 
 type UplinkMessage struct {
@@ -37,20 +40,7 @@ var messagePubHandler mqtt.MessageHandler = func(client mqtt.Client, msg mqtt.Me
 
 	var ttnData TTNData
 	json.Unmarshal([]byte(msg.Payload()), &ttnData)
-
-	// send https://www.traccar.org/osmand/
-	fmt.Println(ttnData.EndDeviceIds.DeviceId)
-	fmt.Println(ttnData.UplinkMessage.DecodedPayload.Latitude)
-	// parseTime, err := time.Parse(time.RFC1123, ttnData.ReceivedAt)
-	// http://10.0.0.10:3055/?id=%s&lat=%f&lon=%f&timestamp=%d&hdop=%d&altitude=%d&speed=%d
-	getUrl := fmt.Sprintf("http://localhost:3055/?id=%s&lat=%f&lon=%f",
-		ttnData.EndDeviceIds.DeviceId,
-		ttnData.UplinkMessage.DecodedPayload.Latitude,
-		ttnData.UplinkMessage.DecodedPayload.Longitude) //,
-	//parseTime.Unix(),
-	//0,//ttnData.UplinkMessage.DecodedPayload.HDOP,
-	//0,//ttnData.UplinkMessage.DecodedPayload.Altitude,
-	//0)
+	getUrl := ttnDataToUrl(ttnData)
 
 	fmt.Println(getUrl)
 
@@ -67,13 +57,13 @@ var connectHandler mqtt.OnConnectHandler = func(client mqtt.Client) {
 
 var connectLostHandler mqtt.ConnectionLostHandler = func(client mqtt.Client, err error) {
 	fmt.Printf("Connect lost: %v", err)
+	panic(err)
 }
 
 func main() {
-	var broker = "localhost"
-	var port = 3983
+	var broker = getenv("MQTT_HOST", "10.0.0.10:3983")
 	opts := mqtt.NewClientOptions()
-	opts.AddBroker(fmt.Sprintf("tcp://%s:%d", broker, port))
+	opts.AddBroker(fmt.Sprintf("tcp://%s", broker))
 	opts.SetDefaultPublishHandler(messagePubHandler)
 	opts.OnConnect = connectHandler
 	opts.OnConnectionLost = connectLostHandler
@@ -89,13 +79,60 @@ func main() {
 	signal.Notify(sigChan, syscall.SIGINT, syscall.SIGTERM)
 	<-sigChan
 
-	client.Unsubscribe("ttn/devices/+/up")
+	client.Unsubscribe(getTopic())
 	client.Disconnect(250)
 }
 
 func sub(client mqtt.Client) {
-	topic := "ttn/devices/+/up"
+	topic := getTopic()
 	token := client.Subscribe(topic, 1, nil)
 	token.Wait()
 	fmt.Printf("Subscribed to topic: %s", topic)
+}
+
+func ttnDataToUrl(ttnData TTNData) string {
+	return fmt.Sprintf("http://%s/?id=%s&lat=%f&lon=%f&hdop=%f&batt=%d&alarm_boolean=%s&md=%s",
+		getenv("TC_HOST", "10.0.0.10:3055"),
+		ttnData.EndDeviceIds.DeviceId,
+		ttnData.UplinkMessage.DecodedPayload.Latitude,
+		ttnData.UplinkMessage.DecodedPayload.Longitude,
+		ttnData.UplinkMessage.DecodedPayload.HDOP,
+		battVToLevel(ttnData.UplinkMessage.DecodedPayload.BatV),
+		strings.ToLower(ttnData.UplinkMessage.DecodedPayload.Alarm),
+		ttnData.UplinkMessage.DecodedPayload.MD)
+}
+
+func battVToLevel(battV float64) int16 {
+	// > 4.0v : 80% ~ 100%
+	// 3.85v ~3.99v: 60% ~ 80%
+	// 3.70v ~ 3.84v: 40% ~ 60%
+	// 3.40v ~ 3.69v: 20% ~ 40%
+	// < 3.39v: 0~20%
+	if battV > 4.0 {
+		return 100
+	}
+
+	if battV > 3.85 {
+		return 70
+	}
+
+	if battV > 3.7 {
+		return 50
+	}
+
+	if battV > 3.4 {
+		return 30
+	}
+	return 10
+}
+func getTopic() string {
+	return getenv("MQTT_TOPIC", "ttn/devices/+/up")
+}
+
+func getenv(key, fallback string) string {
+    value := os.Getenv(key)
+    if len(value) == 0 {
+        return fallback
+    }
+    return value
 }
