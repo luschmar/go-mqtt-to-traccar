@@ -1,14 +1,14 @@
 package main
 
 import (
+	"encoding/json"
 	"fmt"
 	mqtt "github.com/eclipse/paho.mqtt.golang"
+	"net/http"
 	"os"
 	"os/signal"
 	"strings"
 	"syscall"
-	"encoding/json"
-	"net/http"
 )
 
 type DecodedPayload struct {
@@ -61,7 +61,7 @@ var connectLostHandler mqtt.ConnectionLostHandler = func(client mqtt.Client, err
 }
 
 func main() {
-	var broker = getenv("MQTT_HOST", "10.0.0.10:3983")
+	broker := getenv("MQTT_HOST", "10.0.0.10:3983")
 	opts := mqtt.NewClientOptions()
 	opts.AddBroker(fmt.Sprintf("tcp://%s", broker))
 	opts.SetDefaultPublishHandler(messagePubHandler)
@@ -91,14 +91,24 @@ func sub(client mqtt.Client) {
 }
 
 func ttnDataToUrl(ttnData TTNData) string {
-	return fmt.Sprintf("http://%s/?id=%s&lat=%f&lon=%f&hdop=%f&batt=%d&alarm_boolean=%s&md=%s",
+	if strings.EqualFold(ttnData.UplinkMessage.DecodedPayload.Alarm, "true") {
+		return fmt.Sprintf("http://%s/?id=%s&lat=%f&lon=%f&hdop=%f&batt=%d&alarm=general&md=%s",
+			getenv("TC_HOST", "10.0.0.10:3055"),
+			ttnData.EndDeviceIds.DeviceId,
+			ttnData.UplinkMessage.DecodedPayload.Latitude,
+			ttnData.UplinkMessage.DecodedPayload.Longitude,
+			ttnData.UplinkMessage.DecodedPayload.HDOP,
+			battVToLevel(ttnData.UplinkMessage.DecodedPayload.BatV),
+			ttnData.UplinkMessage.DecodedPayload.Alarm,
+			ttnData.UplinkMessage.DecodedPayload.MD)
+	}
+	return fmt.Sprintf("http://%s/?id=%s&lat=%f&lon=%f&hdop=%f&batt=%d&md=%s",
 		getenv("TC_HOST", "10.0.0.10:3055"),
 		ttnData.EndDeviceIds.DeviceId,
 		ttnData.UplinkMessage.DecodedPayload.Latitude,
 		ttnData.UplinkMessage.DecodedPayload.Longitude,
 		ttnData.UplinkMessage.DecodedPayload.HDOP,
 		battVToLevel(ttnData.UplinkMessage.DecodedPayload.BatV),
-		strings.ToLower(ttnData.UplinkMessage.DecodedPayload.Alarm),
 		ttnData.UplinkMessage.DecodedPayload.MD)
 }
 
@@ -130,9 +140,9 @@ func getTopic() string {
 }
 
 func getenv(key, fallback string) string {
-    value := os.Getenv(key)
-    if len(value) == 0 {
-        return fallback
-    }
-    return value
+	value := os.Getenv(key)
+	if len(value) == 0 {
+		return fallback
+	}
+	return value
 }
