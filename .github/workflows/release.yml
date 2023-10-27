@@ -1,3 +1,4 @@
+---
 on:
   push:
     tags:
@@ -6,18 +7,18 @@ jobs:
   docker:
     runs-on: ubuntu-latest
     steps:
-      - 
+      -
         name: Get the version
         id: get_version
         run: echo ::set-output name=VERSION::${GITHUB_REF/refs\/tags\/v/}
       -
         name: Checkout
         uses: actions/checkout@v2
-      - 
+      -
         name: Build go
         uses: actions/setup-go@v2
         with:
-          go-version: '1.17.1' # The Go version to download (if necessary) and use.
+          go-version: '1.21.3'
       - run: CGO_ENABLED=0 GOOS=linux go build -a -installsuffix cgo .
       -
         name: Set up QEMU
