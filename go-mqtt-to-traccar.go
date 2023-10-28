@@ -99,7 +99,6 @@ func ttnDataToUrl(ttnData TTNData) string {
 			ttnData.UplinkMessage.DecodedPayload.Longitude,
 			ttnData.UplinkMessage.DecodedPayload.HDOP,
 			battVToLevel(ttnData.UplinkMessage.DecodedPayload.BatV),
-			ttnData.UplinkMessage.DecodedPayload.Alarm,
 			ttnData.UplinkMessage.DecodedPayload.MD)
 	}
 	return fmt.Sprintf("http://%s/?id=%s&lat=%f&lon=%f&hdop=%f&batt=%d&md=%s",
