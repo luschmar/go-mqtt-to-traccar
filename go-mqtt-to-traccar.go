@@ -107,19 +107,19 @@ func ttnDataToUrl(ttnData TTNData, topic string) string {
 		timestamp := ""
 		for i := range ttnData.UplinkMessage.DecodedPayload.Messages {
 			// Long
-			if ttnData.Messages[i].MeasurementId == "4197" {
+			if ttnData.UplinkMessage.DecodedPayload.Messages[i].MeasurementId == "4197" {
 				longitude = ttnData.UplinkMessage.DecodedPayload.Messages[i].MeasurementValue
 			}
 			// Lat
-			if ttnData.Messages[i].MeasurementId == "4198" {
+			if ttnData.UplinkMessage.DecodedPayload.Messages[i].MeasurementId == "4198" {
 				latitude = ttnData.UplinkMessage.DecodedPayload.Messages[i].MeasurementValue
 			}
 			// Bat
-			if ttnData.Messages[i].MeasurementId == "3000" {
+			if ttnData.UplinkMessage.DecodedPayload.Messages[i].MeasurementId == "3000" {
 				batt = ttnData.UplinkMessage.DecodedPayload.Messages[i].MeasurementValue
 			}
 			// Bat
-			if ttnData.Messages[i].Type == "Timestamp" {
+			if ttnData.UplinkMessage.DecodedPayload.Messages[i].Type == "Timestamp" {
 				timestamp = ttnData.UplinkMessage.DecodedPayload.Messages[i].MeasurementValue
 			}
 		}
