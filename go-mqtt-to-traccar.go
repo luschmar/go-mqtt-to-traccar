@@ -98,29 +98,29 @@ func sub(client mqtt.Client) {
 }
 
 func ttnDataToUrl(ttnData TTNData, topic string) string {
-	if len(ttnData.Messages) != 0 {
-		fmt.Printf("Try extract Messages value: %s", ttnData.Messages)
+	if len(ttnData.UplinkMessage.DecodedPayload.Messages) != 0 {
+		fmt.Printf("Try extract Messages value: %s", ttnData.UplinkMessage.DecodedPayload.Messages)
 		deviceId := strings.Split(topic, "/")[2]
 		latitude := ""
 		longitude := ""
 		batt := ""
 		timestamp := ""
-		for i := range ttnData.Messages {
+		for i := range ttnData.UplinkMessage.DecodedPayload.Messages {
 			// Long
 			if ttnData.Messages[i].MeasurementId == "4197" {
-				longitude = ttnData.Messages[i].MeasurementValue
+				longitude = ttnData.UplinkMessage.DecodedPayload.Messages[i].MeasurementValue
 			}
 			// Lat
 			if ttnData.Messages[i].MeasurementId == "4198" {
-				latitude = ttnData.Messages[i].MeasurementValue
+				latitude = ttnData.UplinkMessage.DecodedPayload.Messages[i].MeasurementValue
 			}
 			// Bat
 			if ttnData.Messages[i].MeasurementId == "3000" {
-				batt = ttnData.Messages[i].MeasurementValue
+				batt = ttnData.UplinkMessage.DecodedPayload.Messages[i].MeasurementValue
 			}
 			// Bat
 			if ttnData.Messages[i].Type == "Timestamp" {
-				timestamp = ttnData.Messages[i].MeasurementValue
+				timestamp = ttnData.UplinkMessage.DecodedPayload.Messages[i].MeasurementValue
 			}
 		}
 		if longitude != "" && latitude != "" {
