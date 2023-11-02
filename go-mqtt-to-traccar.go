@@ -12,9 +12,9 @@ import (
 )
 
 type Message struct {
-	MeasurementId    string `json:"measurementId"`
-	MeasurementValue string `json:"measurementValue"`
-	Type             string `json:"type"`
+	MeasurementId    string          `json:"measurementId"`
+	MeasurementValue json.RawMessage `json:"measurementValue"`
+	Type             string          `json:"type"`
 }
 
 type DecodedPayload struct {
@@ -98,7 +98,7 @@ func sub(client mqtt.Client) {
 }
 
 func ttnDataToUrl(ttnData TTNData, topic string) string {
-	if len(ttnData.UplinkMessage.DecodedPayload.Messages) != 0 {
+	if len(ttnData.UplinkMessage.DecodedPayload.Messages) > 0 {
 		fmt.Printf("Try extract Messages value: %s", ttnData.UplinkMessage.DecodedPayload.Messages)
 		deviceId := strings.Split(topic, "/")[2]
 		latitude := ""
@@ -106,21 +106,21 @@ func ttnDataToUrl(ttnData TTNData, topic string) string {
 		batt := ""
 		timestamp := ""
 		for i := range ttnData.UplinkMessage.DecodedPayload.Messages {
-			// Long
-			if ttnData.UplinkMessage.DecodedPayload.Messages[i].MeasurementId == "4197" {
-				longitude = ttnData.UplinkMessage.DecodedPayload.Messages[i].MeasurementValue
-			}
 			// Lat
 			if ttnData.UplinkMessage.DecodedPayload.Messages[i].MeasurementId == "4198" {
-				latitude = ttnData.UplinkMessage.DecodedPayload.Messages[i].MeasurementValue
+				latitude = strings.Replace(string(ttnData.UplinkMessage.DecodedPayload.Messages[i].MeasurementValue), "\"", "", -1)
+			}
+			// Long
+			if ttnData.UplinkMessage.DecodedPayload.Messages[i].MeasurementId == "4197" {
+				longitude = strings.Replace(string(ttnData.UplinkMessage.DecodedPayload.Messages[i].MeasurementValue), "\"", "", -1)
 			}
 			// Bat
 			if ttnData.UplinkMessage.DecodedPayload.Messages[i].MeasurementId == "3000" {
-				batt = ttnData.UplinkMessage.DecodedPayload.Messages[i].MeasurementValue
+				batt = strings.Replace(string(ttnData.UplinkMessage.DecodedPayload.Messages[i].MeasurementValue), "\"", "", -1)
 			}
 			// Bat
 			if ttnData.UplinkMessage.DecodedPayload.Messages[i].Type == "Timestamp" {
-				timestamp = ttnData.UplinkMessage.DecodedPayload.Messages[i].MeasurementValue
+				timestamp = strings.Replace(string(ttnData.UplinkMessage.DecodedPayload.Messages[i].MeasurementValue), "\"", "", -1)
 			}
 		}
 		if longitude != "" && latitude != "" {
