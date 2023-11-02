@@ -18,14 +18,14 @@ type Message struct {
 }
 
 type DecodedPayload struct {
-	Latitude  float64   `json:"Latitude"`
-	Longitude float64   `json:"Longitude"`
-	HDOP      float32   `json:"HDOP"`
-	BatV      float64   `json:"BatV"`
-	Altitude  float64   `json:"Altitude"`
-	Alarm     string    `json:"ALARM_status"`
-	MD        string    `json:"MD"`
-	Messages  []Message `json:"messages"`
+	Latitude  float64     `json:"Latitude"`
+	Longitude float64     `json:"Longitude"`
+	HDOP      float32     `json:"HDOP"`
+	BatV      float64     `json:"BatV"`
+	Altitude  float64     `json:"Altitude"`
+	Alarm     string      `json:"ALARM_status"`
+	MD        string      `json:"MD"`
+	Messages  [][]Message `json:"messages"`
 }
 
 type UplinkMessage struct {
@@ -47,7 +47,7 @@ var messagePubHandler mqtt.MessageHandler = func(client mqtt.Client, msg mqtt.Me
 
 	var ttnData TTNData
 	json.Unmarshal([]byte(msg.Payload()), &ttnData)
-	getUrl := ttnDataToUrl(ttnData, msg.Topic())
+	getUrl := ttnDataToUrl(ttnData)
 
 	fmt.Println(getUrl)
 
@@ -97,40 +97,50 @@ func sub(client mqtt.Client) {
 	fmt.Printf("Subscribed to topic: %s", topic)
 }
 
-func ttnDataToUrl(ttnData TTNData, topic string) string {
+func ttnDataToUrl(ttnData TTNData) string {
 	if len(ttnData.UplinkMessage.DecodedPayload.Messages) > 0 {
-		fmt.Printf("Try extract Messages value: %s", ttnData.UplinkMessage.DecodedPayload.Messages)
-		deviceId := strings.Split(topic, "/")[2]
+		fmt.Printf("Try extract Messages value: %s\n", ttnData.UplinkMessage.DecodedPayload.Messages)
+		var deviceId = ttnData.EndDeviceIds.DeviceId
 		latitude := ""
 		longitude := ""
 		batt := ""
 		timestamp := ""
-		for i := range ttnData.UplinkMessage.DecodedPayload.Messages {
+		alarm := ""
+		var message = ttnData.UplinkMessage.DecodedPayload.Messages[0]
+		for i := range message {
 			// Lat
-			if ttnData.UplinkMessage.DecodedPayload.Messages[i].MeasurementId == "4198" {
-				latitude = strings.Replace(string(ttnData.UplinkMessage.DecodedPayload.Messages[i].MeasurementValue), "\"", "", -1)
+			if message[i].MeasurementId == "4198" {
+				latitude = strings.Replace(string(message[i].MeasurementValue), "\"", "", -1)
 			}
 			// Long
-			if ttnData.UplinkMessage.DecodedPayload.Messages[i].MeasurementId == "4197" {
-				longitude = strings.Replace(string(ttnData.UplinkMessage.DecodedPayload.Messages[i].MeasurementValue), "\"", "", -1)
+			if message[i].MeasurementId == "4197" {
+				longitude = strings.Replace(string(message[i].MeasurementValue), "\"", "", -1)
 			}
 			// Bat
-			if ttnData.UplinkMessage.DecodedPayload.Messages[i].MeasurementId == "3000" {
-				batt = strings.Replace(string(ttnData.UplinkMessage.DecodedPayload.Messages[i].MeasurementValue), "\"", "", -1)
+			if message[i].MeasurementId == "3000" {
+				batt = strings.Replace(string(message[i].MeasurementValue), "\"", "", -1)
 			}
 			// Bat
-			if ttnData.UplinkMessage.DecodedPayload.Messages[i].Type == "Timestamp" {
-				timestamp = strings.Replace(string(ttnData.UplinkMessage.DecodedPayload.Messages[i].MeasurementValue), "\"", "", -1)
+			if message[i].Type == "Timestamp" {
+				timestamp = strings.Replace(string(message[i].MeasurementValue), "\"", "", -1)
+			}
+			// Bat
+			if message[i].Type == "4200" {
+				var evalAlarm = strings.Replace(string(message[i].MeasurementValue), "\"", "", -1)
+				if evalAlarm == "1" {
+					alarm = "&alarm=general"
+				}
 			}
 		}
 		if longitude != "" && latitude != "" {
-			return fmt.Sprintf("http://%s/?id=%s&lat=%s&lon=%s&batt=%s&timestamp=%s",
+			return fmt.Sprintf("http://%s/?id=%s&lat=%s&lon=%s&batt=%s&timestamp=%s%s",
 				getenv("TC_HOST", "10.0.0.10:3055"),
 				deviceId,
 				latitude,
 				longitude,
 				batt,
-				timestamp)
+				timestamp,
+				alarm)
 		}
 	}
 
