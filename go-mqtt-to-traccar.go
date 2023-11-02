@@ -11,14 +11,21 @@ import (
 	"syscall"
 )
 
+type Message struct {
+	MeasurementId    string `json:"measurementId"`
+	MeasurementValue string `json:"measurementValue"`
+	Type             string `json:"type"`
+}
+
 type DecodedPayload struct {
-	Latitude  float64 `json:"Latitude"`
-	Longitude float64 `json:"Longitude"`
-	HDOP      float32 `json:"HDOP"`
-	BatV      float64 `json:"BatV"`
-	Altitude  float64 `json:"Altitude"`
-	Alarm     string  `json:"ALARM_status"`
-	MD        string  `json:"MD"`
+	Latitude  float64   `json:"Latitude"`
+	Longitude float64   `json:"Longitude"`
+	HDOP      float32   `json:"HDOP"`
+	BatV      float64   `json:"BatV"`
+	Altitude  float64   `json:"Altitude"`
+	Alarm     string    `json:"ALARM_status"`
+	MD        string    `json:"MD"`
+	Messages  []Message `json:"messages"`
 }
 
 type UplinkMessage struct {
@@ -40,7 +47,7 @@ var messagePubHandler mqtt.MessageHandler = func(client mqtt.Client, msg mqtt.Me
 
 	var ttnData TTNData
 	json.Unmarshal([]byte(msg.Payload()), &ttnData)
-	getUrl := ttnDataToUrl(ttnData)
+	getUrl := ttnDataToUrl(ttnData, msg.Topic())
 
 	fmt.Println(getUrl)
 
@@ -90,7 +97,43 @@ func sub(client mqtt.Client) {
 	fmt.Printf("Subscribed to topic: %s", topic)
 }
 
-func ttnDataToUrl(ttnData TTNData) string {
+func ttnDataToUrl(ttnData TTNData, topic string) string {
+	if len(ttnData.Messages) != 0 {
+		fmt.Printf("Try extract Messages value: %s", ttnData.Messages)
+		deviceId := strings.Split(topic, "/")[2]
+		latitude := ""
+		longitude := ""
+		batt := ""
+		timestamp := ""
+		for i := range ttnData.Messages {
+			// Long
+			if ttnData.Messages[i].MeasurementId == "4197" {
+				longitude = ttnData.Messages[i].MeasurementValue
+			}
+			// Lat
+			if ttnData.Messages[i].MeasurementId == "4198" {
+				latitude = ttnData.Messages[i].MeasurementValue
+			}
+			// Bat
+			if ttnData.Messages[i].MeasurementId == "3000" {
+				batt = ttnData.Messages[i].MeasurementValue
+			}
+			// Bat
+			if ttnData.Messages[i].Type == "Timestamp" {
+				timestamp = ttnData.Messages[i].MeasurementValue
+			}
+		}
+		if longitude != "" && latitude != "" {
+			return fmt.Sprintf("http://%s/?id=%s&lat=%s&lon=%s&batt=%s&timestamp=%s",
+				getenv("TC_HOST", "10.0.0.10:3055"),
+				deviceId,
+				latitude,
+				longitude,
+				batt,
+				timestamp)
+		}
+	}
+
 	if strings.EqualFold(ttnData.UplinkMessage.DecodedPayload.Alarm, "true") {
 		return fmt.Sprintf("http://%s/?id=%s&lat=%f&lon=%f&hdop=%f&batt=%d&alarm=general&md=%s",
 			getenv("TC_HOST", "10.0.0.10:3055"),
