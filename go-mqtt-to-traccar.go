@@ -160,14 +160,15 @@ func ttnDataToUrl(ttnData TTNData) string {
 				}
 			}
 			if message[i].Type == "5100" && getenv("GOOGLE_API_KEY", "") != "" {
+				fmt.Println("Try Google-API")
+
 				response := tryResolveWifiWithGoogle(string(message[i].MeasurementValue))
+				fmt.Println(response)
 
 				if (response.Location != GeoLocation{} && response.Accuracy < 200) {
 					latitude = fmt.Sprintf("%f", response.Location.Lat)
 					longitude = fmt.Sprintf("%f", response.Location.Lng)
 					accuracy = fmt.Sprintf("&accuracy=%f", response.Accuracy)
-				} else {
-					fmt.Println(response)
 				}
 			}
 		}
@@ -206,6 +207,8 @@ func ttnDataToUrl(ttnData TTNData) string {
 
 func tryResolveWifiWithGoogle(data string) GeoLocationResponse {
 	geoLocationRequest := transformDataToGoogleLocation(data)
+	fmt.Printf("geoLocationRequest: %v\n", geoLocationRequest)
+
 
 	googleMapsAPIkey := getenv("GOOGLE_API_KEY", "invalid")
 	url := fmt.Sprintf("https://www.googleapis.com/geolocation/v1/geolocate?key=%s", googleMapsAPIkey)
@@ -223,8 +226,14 @@ func tryResolveWifiWithGoogle(data string) GeoLocationResponse {
 	}
 
 	resBody, err := ioutil.ReadAll(response.Body)
+
+	fmt.Printf("geolocation response body: %v\n", resBody)
+
 	var geoLocationResponse GeoLocationResponse
 	json.Unmarshal([]byte(resBody), &geoLocationResponse)
+
+
+	fmt.Printf("geolocation response body: %v\n", geoLocationResponse)
 
 	return geoLocationResponse
 }
