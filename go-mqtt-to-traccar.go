@@ -1,15 +1,42 @@
 package main
 
 import (
+	"bytes"
 	"encoding/json"
 	"fmt"
 	mqtt "github.com/eclipse/paho.mqtt.golang"
+	"io/ioutil"
 	"net/http"
 	"os"
 	"os/signal"
 	"strings"
 	"syscall"
 )
+
+type WifiData struct {
+	Mac  string `json:"mac"`
+	Rssi string `json:"rssi"`
+}
+
+type GeoLocationRequest struct {
+	WifiAccessPoints []GeoLocationWifi `json:"wifiAccessPoints"`
+}
+
+type GeoLocationResponse struct {
+	Location GeoLocation `json:"location"`
+	Accuracy float64     `json:"accuracy"`
+}
+
+type GeoLocation struct {
+	Lat float64 `json:"lat"`
+	Lng float64 `json:"lng"`
+}
+
+type GeoLocationWifi struct {
+	MacAddress         string `json:"macAddress"`
+	SignalStrength     string `json:"signalStrength"`
+	SignalToNoiseRatio string `json:"signalToNoiseRatio"`
+}
 
 type Message struct {
 	MeasurementId    string          `json:"measurementId"`
@@ -106,6 +133,7 @@ func ttnDataToUrl(ttnData TTNData) string {
 		batt := ""
 		timestamp := ""
 		alarm := ""
+		accuracy := ""
 		var message = ttnData.UplinkMessage.DecodedPayload.Messages[0]
 		for i := range message {
 			// Lat
@@ -131,16 +159,28 @@ func ttnDataToUrl(ttnData TTNData) string {
 					alarm = "&alarm=general"
 				}
 			}
+			if message[i].Type == "5100" && getenv("GOOGLE_API_KEY", "") != "" {
+				response := tryResolveWifiWithGoogle(string(message[i].MeasurementValue))
+
+				if (response.Location != GeoLocation{} && response.Accuracy < 200) {
+					latitude = fmt.Sprintf("%f", response.Location.Lat)
+					longitude = fmt.Sprintf("%f", response.Location.Lng)
+					accuracy = fmt.Sprintf("&accuracy=%f", response.Accuracy)
+				} else {
+					fmt.Println(response)
+				}
+			}
 		}
 		if longitude != "" && latitude != "" {
-			return fmt.Sprintf("http://%s/?id=%s&lat=%s&lon=%s&batt=%s&timestamp=%s%s",
+			return fmt.Sprintf("http://%s/?id=%s&lat=%s&lon=%s&batt=%s&timestamp=%s%s%s",
 				getenv("TC_HOST", "10.0.0.10:3055"),
 				deviceId,
 				latitude,
 				longitude,
 				batt,
 				timestamp,
-				alarm)
+				alarm,
+				accuracy)
 		}
 	}
 
@@ -162,6 +202,41 @@ func ttnDataToUrl(ttnData TTNData) string {
 		ttnData.UplinkMessage.DecodedPayload.HDOP,
 		battVToLevel(ttnData.UplinkMessage.DecodedPayload.BatV),
 		ttnData.UplinkMessage.DecodedPayload.MD)
+}
+
+func tryResolveWifiWithGoogle(data string) GeoLocationResponse {
+	geoLocationRequest := transformDataToGoogleLocation(data)
+
+	googleMapsAPIkey := getenv("GOOGLE_API_KEY", "invalid")
+	url := fmt.Sprintf("https://www.googleapis.com/geolocation/v1/geolocate?key=%s", googleMapsAPIkey)
+
+	payload, err := json.Marshal(geoLocationRequest)
+
+	if err != nil {
+		fmt.Println(err)
+	}
+
+	response, err := http.Post(url, "application/json", bytes.NewBuffer(payload))
+
+	if err != nil {
+		fmt.Println(err)
+	}
+
+	resBody, err := ioutil.ReadAll(response.Body)
+	var geoLocationResponse GeoLocationResponse
+	json.Unmarshal([]byte(resBody), &geoLocationResponse)
+
+	return geoLocationResponse
+}
+
+func transformDataToGoogleLocation(data string) GeoLocationRequest {
+	var wifiData []WifiData
+	json.Unmarshal([]byte(data), &wifiData)
+	accessPoints := make([]GeoLocationWifi, len(wifiData))
+	for i, e := range wifiData {
+		accessPoints[i] = GeoLocationWifi{e.Mac, e.Rssi, "0"}
+	}
+	return GeoLocationRequest{accessPoints}
 }
 
 func battVToLevel(battV float64) int16 {

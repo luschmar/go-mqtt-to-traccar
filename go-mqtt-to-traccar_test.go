@@ -45,3 +45,12 @@ func Test_parse(t *testing.T) {
 	result := ttnDataToUrl(ttnData)
 	assert.Equal(t, "http://10.0.0.10:3055/?id=device&lat=3.333333&lon=4.444444&batt=98&timestamp=1698957833000", result)
 }
+
+func Test_transformDataToGoogleLocation(t *testing.T) {
+	data := `[{"mac":"MAC-1","rssi":"-12"},{"mac":"MAC-2","rssi":"-13"}]`
+	result := transformDataToGoogleLocation(data)
+
+	geoLocationWifi := []GeoLocationWifi{GeoLocationWifi{"MAC-1", "-12", "0"}, GeoLocationWifi{"MAC-2", "-13", "0"}}
+
+	assert.Equal(t, GeoLocationRequest{geoLocationWifi}, result)
+}
