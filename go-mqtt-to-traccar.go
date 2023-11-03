@@ -153,13 +153,13 @@ func ttnDataToUrl(ttnData TTNData) string {
 				timestamp = strings.Replace(string(message[i].MeasurementValue), "\"", "", -1)
 			}
 			// Bat
-			if message[i].Type == "4200" {
+			if message[i].MeasurementId == "4200" {
 				var evalAlarm = strings.Replace(string(message[i].MeasurementValue), "\"", "", -1)
 				if evalAlarm == "1" {
 					alarm = "&alarm=general"
 				}
 			}
-			if message[i].Type == "5100" && getenv("GOOGLE_API_KEY", "") != "" {
+			if message[i].MeasurementId == "5100" && getenv("GOOGLE_API_KEY", "") != "" {
 				fmt.Println("Try Google-API")
 
 				response := tryResolveWifiWithGoogle(string(message[i].MeasurementValue))
