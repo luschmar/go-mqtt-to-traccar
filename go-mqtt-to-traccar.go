@@ -159,7 +159,7 @@ func ttnDataToUrl(ttnData TTNData) string {
 					alarm = "&alarm=general"
 				}
 			}
-			if message[i].MeasurementId == "5100" && getenv("GOOGLE_API_KEY", "") != "" {
+			if message[i].MeasurementId == "5001" && getenv("GOOGLE_API_KEY", "") != "" {
 				fmt.Println("Try Google-API")
 
 				response := tryResolveWifiWithGoogle(string(message[i].MeasurementValue))
