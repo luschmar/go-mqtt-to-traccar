@@ -3,6 +3,7 @@ package main
 import (
 	"encoding/json"
 	"github.com/stretchr/testify/assert"
+	"strings"
 	"testing"
 )
 
@@ -34,7 +35,8 @@ func Test_ttnDataToUrl_t1000(t *testing.T) {
 	data := TTNData{EndDeviceIds{"device"}, uplink, ""}
 
 	result := ttnDataToUrl(data)
-	assert.Equal(t, "http://10.0.0.10:3055/?id=device&lat=10&lon=20&batt=&timestamp=", result)
+
+	assert.True(t, strings.HasPrefix(result, "http://10.0.0.10:3055/?id=device&lat=10&lon=20&batt=&timestamp="))
 }
 
 func Test_parse(t *testing.T) {
@@ -43,7 +45,8 @@ func Test_parse(t *testing.T) {
 	json.Unmarshal([]byte(data), &ttnData)
 
 	result := ttnDataToUrl(ttnData)
-	assert.Equal(t, "http://10.0.0.10:3055/?id=device&lat=3.333333&lon=4.444444&batt=98&timestamp=1698957833000", result)
+
+	assert.True(t, strings.HasPrefix(result, "http://10.0.0.10:3055/?id=device&lat=3.333333&lon=4.444444&batt=98&timestamp="))
 }
 
 func Test_transformDataToGoogleLocation(t *testing.T) {

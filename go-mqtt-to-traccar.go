@@ -9,8 +9,10 @@ import (
 	"net/http"
 	"os"
 	"os/signal"
+	"strconv"
 	"strings"
 	"syscall"
+	"time"
 )
 
 type WifiData struct {
@@ -131,7 +133,7 @@ func ttnDataToUrl(ttnData TTNData) string {
 		latitude := ""
 		longitude := ""
 		batt := ""
-		timestamp := ""
+		timestamp := strconv.FormatInt(time.Now().UnixMilli(), 10)
 		alarm := ""
 		accuracy := ""
 		var message = ttnData.UplinkMessage.DecodedPayload.Messages[0]
@@ -147,10 +149,6 @@ func ttnDataToUrl(ttnData TTNData) string {
 			// Bat
 			if message[i].MeasurementId == "3000" {
 				batt = strings.Replace(string(message[i].MeasurementValue), "\"", "", -1)
-			}
-			// Bat
-			if message[i].Type == "Timestamp" {
-				timestamp = strings.Replace(string(message[i].MeasurementValue), "\"", "", -1)
 			}
 			// Bat
 			if message[i].MeasurementId == "4200" {
@@ -172,6 +170,7 @@ func ttnDataToUrl(ttnData TTNData) string {
 				}
 			}
 		}
+
 		if longitude != "" && latitude != "" {
 			return fmt.Sprintf("http://%s/?id=%s&lat=%s&lon=%s&batt=%s&timestamp=%s%s%s",
 				getenv("TC_HOST", "10.0.0.10:3055"),
@@ -209,7 +208,6 @@ func tryResolveWifiWithGoogle(data string) GeoLocationResponse {
 	geoLocationRequest := transformDataToGoogleLocation(data)
 	fmt.Printf("geoLocationRequest: %v\n", geoLocationRequest)
 
-
 	googleMapsAPIkey := getenv("GOOGLE_API_KEY", "invalid")
 	url := fmt.Sprintf("https://www.googleapis.com/geolocation/v1/geolocate?key=%s", googleMapsAPIkey)
 
@@ -231,7 +229,6 @@ func tryResolveWifiWithGoogle(data string) GeoLocationResponse {
 
 	var geoLocationResponse GeoLocationResponse
 	json.Unmarshal([]byte(resBody), &geoLocationResponse)
-
 
 	fmt.Printf("geolocation response body: %v\n", geoLocationResponse)
 
