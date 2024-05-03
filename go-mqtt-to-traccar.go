@@ -43,6 +43,7 @@ type GeoLocationWifi struct {
 type Message struct {
 	MeasurementId    string          `json:"measurementId"`
 	MeasurementValue json.RawMessage `json:"measurementValue"`
+	timestamp        uint64          `json:"timestamp"`
 	Type             string          `json:"type"`
 }
 
@@ -150,7 +151,7 @@ func ttnDataToUrl(ttnData TTNData) string {
 			if message[i].MeasurementId == "3000" {
 				batt = strings.Replace(string(message[i].MeasurementValue), "\"", "", -1)
 			}
-			// Bat
+			// Alarm
 			if message[i].MeasurementId == "4200" {
 				var evalAlarm = strings.Replace(string(message[i].MeasurementValue), "\"", "", -1)
 				if evalAlarm == "1" {
@@ -167,6 +168,7 @@ func ttnDataToUrl(ttnData TTNData) string {
 					latitude = fmt.Sprintf("%f", response.Location.Lat)
 					longitude = fmt.Sprintf("%f", response.Location.Lng)
 					accuracy = fmt.Sprintf("&accuracy=%f", response.Accuracy)
+					timestamp = strconv.FormatUint(message[i].timestamp/1000, 10)
 				}
 			}
 		}
