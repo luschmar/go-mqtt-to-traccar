@@ -128,6 +128,7 @@ func sub(client mqtt.Client) {
 }
 
 func ttnDataToUrl(ttnData TTNData) string {
+	// T1000-B Sensor
 	if len(ttnData.UplinkMessage.DecodedPayload.Messages) > 0 {
 		fmt.Printf("Try extract Messages value: %s\n", ttnData.UplinkMessage.DecodedPayload.Messages)
 		var deviceId = ttnData.EndDeviceIds.DeviceId
@@ -139,30 +140,24 @@ func ttnDataToUrl(ttnData TTNData) string {
 		accuracy := ""
 		var message = ttnData.UplinkMessage.DecodedPayload.Messages[0]
 		for i := range message {
-			// Lat
+			timestamp = strconv.FormatUint(message[i].timestamp/1000, 10)
 			if message[i].MeasurementId == "4198" {
+				// Lat
 				latitude = strings.Replace(string(message[i].MeasurementValue), "\"", "", -1)
-				timestamp = strconv.FormatUint(message[i].timestamp/1000, 10)
-			}
-			// Long
-			if message[i].MeasurementId == "4197" {
+			} else if message[i].MeasurementId == "4197" {
+				// Lon
 				longitude = strings.Replace(string(message[i].MeasurementValue), "\"", "", -1)
-				timestamp = strconv.FormatUint(message[i].timestamp/1000, 10)
-			}
-			// Bat
-			if message[i].MeasurementId == "3000" {
+			} else if message[i].MeasurementId == "3000" {
+				// Bat
 				batt = strings.Replace(string(message[i].MeasurementValue), "\"", "", -1)
-				timestamp = strconv.FormatUint(message[i].timestamp/1000, 10)
-			}
-			// Alarm
-			if message[i].MeasurementId == "4200" {
+			} else if message[i].MeasurementId == "4200" {
+				// Alarm
 				var evalAlarm = strings.Replace(string(message[i].MeasurementValue), "\"", "", -1)
 				if evalAlarm == "1" {
 					alarm = "&alarm=general"
 				}
-				timestamp = strconv.FormatUint(message[i].timestamp/1000, 10)
-			}
-			if message[i].MeasurementId == "5001" && getenv("GOOGLE_API_KEY", "") != "" {
+			} else if message[i].MeasurementId == "5001" && getenv("GOOGLE_API_KEY", "") != "" {
+				// Mac-Adresses
 				fmt.Println("Try Google-API")
 
 				response := tryResolveWifiWithGoogle(string(message[i].MeasurementValue))
@@ -172,7 +167,6 @@ func ttnDataToUrl(ttnData TTNData) string {
 					latitude = fmt.Sprintf("%f", response.Location.Lat)
 					longitude = fmt.Sprintf("%f", response.Location.Lng)
 					accuracy = fmt.Sprintf("&accuracy=%f", response.Accuracy)
-					timestamp = strconv.FormatUint(message[i].timestamp/1000, 10)
 				}
 			}
 		}
@@ -189,7 +183,8 @@ func ttnDataToUrl(ttnData TTNData) string {
 				accuracy)
 		}
 	}
-
+	
+	// Other Sensor
 	if strings.EqualFold(ttnData.UplinkMessage.DecodedPayload.Alarm, "true") {
 		return fmt.Sprintf("http://%s/?id=%s&lat=%f&lon=%f&hdop=%f&batt=%d&alarm=general&md=%s",
 			getenv("TC_HOST", "10.0.0.10:3055"),
