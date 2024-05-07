@@ -184,7 +184,7 @@ func ttnDataToUrl(ttnData TTNData) string {
 		}
 	}
 	
-	// Other Sensor
+	// LGT-92 Sensor
 	if strings.EqualFold(ttnData.UplinkMessage.DecodedPayload.Alarm, "true") {
 		return fmt.Sprintf("http://%s/?id=%s&lat=%f&lon=%f&hdop=%f&batt=%d&alarm=general&md=%s",
 			getenv("TC_HOST", "10.0.0.10:3055"),

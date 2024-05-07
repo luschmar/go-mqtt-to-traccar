@@ -1,5 +1,5 @@
 # go-mqtt-to-traccar
-Transfer data from a LGT-92 Device to TTN/MQTT into Traccar.
+Transfer data from a LGT-92 Device or T1000-B to TTN/MQTT into Traccar.
 
 ## Setup
 
