@@ -142,14 +142,17 @@ func ttnDataToUrl(ttnData TTNData) string {
 			// Lat
 			if message[i].MeasurementId == "4198" {
 				latitude = strings.Replace(string(message[i].MeasurementValue), "\"", "", -1)
+				timestamp = strconv.FormatUint(message[i].timestamp/1000, 10)
 			}
 			// Long
 			if message[i].MeasurementId == "4197" {
 				longitude = strings.Replace(string(message[i].MeasurementValue), "\"", "", -1)
+				timestamp = strconv.FormatUint(message[i].timestamp/1000, 10)
 			}
 			// Bat
 			if message[i].MeasurementId == "3000" {
 				batt = strings.Replace(string(message[i].MeasurementValue), "\"", "", -1)
+				timestamp = strconv.FormatUint(message[i].timestamp/1000, 10)
 			}
 			// Alarm
 			if message[i].MeasurementId == "4200" {
@@ -157,6 +160,7 @@ func ttnDataToUrl(ttnData TTNData) string {
 				if evalAlarm == "1" {
 					alarm = "&alarm=general"
 				}
+				timestamp = strconv.FormatUint(message[i].timestamp/1000, 10)
 			}
 			if message[i].MeasurementId == "5001" && getenv("GOOGLE_API_KEY", "") != "" {
 				fmt.Println("Try Google-API")
