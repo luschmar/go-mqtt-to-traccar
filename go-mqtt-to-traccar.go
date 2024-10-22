@@ -207,12 +207,12 @@ func ttnDataToUrl(ttnData TTNData) string {
 
 func tryResolveWifiWithGoogle(data string) GeoLocationResponse {
 	geoLocationRequest := transformDataToGoogleLocation(data)
-	fmt.Printf("geoLocationRequest: %v\n", geoLocationRequest)
 
 	googleMapsAPIkey := getenv("GOOGLE_API_KEY", "invalid")
 	url := fmt.Sprintf("https://www.googleapis.com/geolocation/v1/geolocate?key=%s", googleMapsAPIkey)
 
 	payload, err := json.Marshal(geoLocationRequest)
+	fmt.Printf("geoLocationRequest Payload: %v\n", payload)
 
 	if err != nil {
 		fmt.Println(err)
