@@ -17,7 +17,7 @@ import (
 
 type WifiData struct {
 	Mac  string `json:"mac"`
-	Rssi string `json:"rssi"`
+	Rssi int64  `json:"rssi"`
 }
 
 type GeoLocationRequest struct {
@@ -183,7 +183,7 @@ func ttnDataToUrl(ttnData TTNData) string {
 				accuracy)
 		}
 	}
-	
+
 	// LGT-92 Sensor
 	if strings.EqualFold(ttnData.UplinkMessage.DecodedPayload.Alarm, "true") {
 		return fmt.Sprintf("http://%s/?id=%s&lat=%f&lon=%f&hdop=%f&batt=%d&alarm=general&md=%s",
@@ -212,7 +212,6 @@ func tryResolveWifiWithGoogle(data string) GeoLocationResponse {
 	url := fmt.Sprintf("https://www.googleapis.com/geolocation/v1/geolocate?key=%s", googleMapsAPIkey)
 
 	payload, err := json.Marshal(geoLocationRequest)
-	fmt.Printf("geoLocationRequest Payload: %v\n", payload)
 
 	if err != nil {
 		fmt.Println(err)
@@ -241,7 +240,7 @@ func transformDataToGoogleLocation(data string) GeoLocationRequest {
 	json.Unmarshal([]byte(data), &wifiData)
 	accessPoints := make([]GeoLocationWifi, len(wifiData))
 	for i, e := range wifiData {
-		accessPoints[i] = GeoLocationWifi{e.Mac, e.Rssi, "0"}
+		accessPoints[i] = GeoLocationWifi{e.Mac, strconv.FormatInt(e.Rssi, 10), "0"}
 	}
 	return GeoLocationRequest{accessPoints}
 }
