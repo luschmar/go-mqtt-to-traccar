@@ -27,7 +27,10 @@ func Test_ttnDataToUrl_data(t *testing.T) {
 
 func Test_ttnDataToUrl_t1000(t *testing.T) {
 	messages := [][]Message{
-		{Message{"4198", []byte("10"), "Lat"}, Message{"4197", []byte("20"), "Long"}},
+		{
+			Message{"4198", []byte("10"), 99_000, "Lat"},
+			Message{"4197", []byte("20"), 99_000, "Lon"},
+		},
 	}
 
 	decoded := DecodedPayload{0.0, 0.0, 0.0, 0.0, 0.0, "FALSE", "A", messages}
@@ -36,7 +39,24 @@ func Test_ttnDataToUrl_t1000(t *testing.T) {
 
 	result := ttnDataToUrl(data)
 
-	assert.True(t, strings.HasPrefix(result, "http://10.0.0.10:3055/?id=device&lat=10&lon=20&batt=&timestamp="))
+	assert.True(t, strings.HasPrefix(result, "http://10.0.0.10:3055/?id=device&lat=10&lon=20&batt=&timestamp=99"))
+}
+
+func Test_ttnDataToUrl_t1000_Timestamp(t *testing.T) {
+	messages := [][]Message{
+		{
+			Message{"4198", []byte("10.2"), 1729618242000, "Lat"},
+			Message{"4197", []byte("20.4"), 1729618242000, "Lon"},
+		},
+	}
+
+	decoded := DecodedPayload{0.0, 0.0, 0.0, 0.0, 0.0, "FALSE", "A", messages}
+	uplink := UplinkMessage{decoded}
+	data := TTNData{EndDeviceIds{"device"}, uplink, ""}
+
+	result := ttnDataToUrl(data)
+
+	assert.True(t, strings.HasPrefix(result, "http://10.0.0.10:3055/?id=device&lat=10.2&lon=20.4&batt=&timestamp=1729618242"))
 }
 
 func Test_parse(t *testing.T) {
@@ -50,7 +70,7 @@ func Test_parse(t *testing.T) {
 }
 
 func Test_transformDataToGoogleLocation(t *testing.T) {
-	data := `[{"mac":"MAC-1","rssi":"-12"},{"mac":"MAC-2","rssi":"-13"}]`
+	data := `[{"mac":"MAC-1","rssi":-12},{"mac":"MAC-2","rssi":-13}]`
 	result := transformDataToGoogleLocation(data)
 
 	geoLocationWifi := []GeoLocationWifi{GeoLocationWifi{"MAC-1", "-12", "0"}, GeoLocationWifi{"MAC-2", "-13", "0"}}

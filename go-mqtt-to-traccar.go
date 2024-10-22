@@ -43,7 +43,7 @@ type GeoLocationWifi struct {
 type Message struct {
 	MeasurementId    string          `json:"measurementId"`
 	MeasurementValue json.RawMessage `json:"measurementValue"`
-	timestamp        uint64          `json:"timestamp"`
+	Timestamp        uint64          `json:"timestamp"`
 	Type             string          `json:"type"`
 }
 
@@ -130,7 +130,7 @@ func sub(client mqtt.Client) {
 func ttnDataToUrl(ttnData TTNData) string {
 	// T1000-B Sensor
 	if len(ttnData.UplinkMessage.DecodedPayload.Messages) > 0 {
-		fmt.Printf("Try extract Messages value: %s\n", ttnData.UplinkMessage.DecodedPayload.Messages)
+		fmt.Printf("Try extract Messages value: %v\n", ttnData.UplinkMessage.DecodedPayload.Messages)
 		var deviceId = ttnData.EndDeviceIds.DeviceId
 		latitude := ""
 		longitude := ""
@@ -140,7 +140,7 @@ func ttnDataToUrl(ttnData TTNData) string {
 		accuracy := ""
 		var message = ttnData.UplinkMessage.DecodedPayload.Messages[0]
 		for i := range message {
-			timestamp = strconv.FormatUint(message[i].timestamp/1000, 10)
+			timestamp = strconv.FormatUint(message[i].Timestamp/1000, 10)
 			if message[i].MeasurementId == "4198" {
 				// Lat
 				latitude = strings.Replace(string(message[i].MeasurementValue), "\"", "", -1)
